@@ -187,10 +187,6 @@ def write_assets_to_sheet(worksheet, weather_table: dict, placement_name: str, a
                 },
                 "horizontalAlignment": "CENTER"
             })
-        # ---------------- SET FIXED COLUMN WIDTH (200px) ----------------
-        # Loop through each column and set it to 200 pixels
-        for i in range(1, num_cols + 1):
-            worksheet.set_column_width(i, 1000)
 
     except Exception as e:
         log(f"Error writing asset data to Google Sheet: {e}")
@@ -263,29 +259,29 @@ def write_code_comparison_to_sheet(worksheet, headers, rows, comparison_storage,
     try:
         rows_to_write = []
         is_generic_mode = "CID" in headers and "Small CID" not in headers
+        
+        # 1) Add new SafeFrame columns dynamically
         if is_generic_mode:
-                # UPDATED HEADERS FOR GENERIC
-            extra_headers = ["Lab Product", "Ad Size - CID", "Ad Size - Test GAM"]
+            extra_headers = ["Lab Product", "Ad Size - CID", "Ad Size - Test GAM", "SafeFrame - CID", "SafeFrame - Test GAM"]
         else:
-            extra_headers = ["Lab Product - Small", "Lab Product - Large", "Ad Size - Small", "Ad Size - Large"]
+            extra_headers = [
+                "Lab Product - Small", "Lab Product - Large", "Ad Size - Small", "Ad Size - Large", 
+                "SafeFrame - Small CID", "SafeFrame - Large CID", "SafeFrame - Small Test GAM", "SafeFrame - Large Test GAM"
+            ]
             
+        new_headers = headers + extra_headers
 
         if is_header_only:
             rows_to_write.append([]) 
-            rows_to_write.append(["Creative Name, Actual Size and Lab Product Checking"])
+            rows_to_write.append(["Creative Name, Actual Size, Lab Product, and SafeFrame Checking"])
             
-            new_headers = headers + extra_headers
             rows_to_write.append(new_headers)
-            # --- ADD THE FOOTER ROW IMMEDIATELY ---
-            # We pull the actual footer_row you already defined
             original_footer = comparison_storage.get("footer_row", [])
             if original_footer:
-                # Pad the footer row with empty strings to match the new extra columns
                 padded_footer = list(original_footer) + ([""] * len(extra_headers))
                 rows_to_write.append(padded_footer)
         
         elif is_tracking_table:
-            # [STRICTLY YOUR PROVIDED TABLE 2 LOGIC - UNCHANGED]
             rows_to_write.append([]) 
             rows_to_write.append([]) 
             rows_to_write.append(["Verify Advanced Settings"])
@@ -314,61 +310,69 @@ def write_code_comparison_to_sheet(worksheet, headers, rows, comparison_storage,
                 rows_to_write.append(row_data)
 
         else:
-            
-            # --- CODE COMPARISON TABLE DATA APPEND ---
             for idx, row in enumerate(rows):
                 data = comparison_storage.get(idx, {})
                 if is_generic_mode:
                     row_extras = [
                         data.get("lab_product_generic", "N/A"),
                         data.get("ad_size_cid", "N/A"),
-                        data.get("ad_size_test_gam", "N/A")
+                        data.get("ad_size_test_gam", "N/A"),
+                        data.get("sf_cid", "N/A"),
+                        data.get("sf_gam", "N/A")
                     ]
                 else:
                     row_extras = [
                         data.get("lab_product_small", "N/A"),
                         data.get("lab_product_large", "N/A"),
                         data.get("ad_size_small", "N/A"),
-                        data.get("ad_size_large", "N/A")
+                        data.get("ad_size_large", "N/A"),
+                        data.get("sf_small_cid", "N/A"),
+                        data.get("sf_large_cid", "N/A"),
+                        data.get("sf_small_gam", "N/A"),
+                        data.get("sf_large_gam", "N/A")
                     ]
                 rows_to_write.append(list(row) + row_extras)
-            # --- DATA APPEND & FOOTER APPEND ---
-            # If we pass footer_row in comparison_storage, append it
+                
             original_footer = comparison_storage.get("footer_row", [])
             if original_footer:
-                if is_generic_mode:
-                    extra_count = 3
-                else:
-                    extra_count = 4
-                padded_footer = list(original_footer) + ([""] * extra_count)
+                padded_footer = list(original_footer) + ([""] * len(extra_headers))
                 rows_to_write.append(padded_footer)
             
         if rows_to_write:
             worksheet.append_rows(rows_to_write, value_input_option="RAW")
         
         # ---------------- APPLY COLOR TO HEADER ----------------
-        # Find all cells in Column A that contain exactly "Placement Name"
-        # header_cells = worksheet.findall("Placement Name", in_column=1)
-        
-        # num_cols = len(new_headers)
-        # col_letter = chr(64 + num_cols) if num_cols <= 26 else "Z"
+        # Fixed: We execute the styling logic whenever we write headers
+        if is_header_only or is_tracking_table:
+            # Safely grab the first column header (usually 'Placement Name')
+            search_term = "Placement Name" if not headers else headers[0]
+            header_cells = worksheet.findall(search_term, in_column=1)
+            
+            # Dynamically calculate how many columns long the highlight should stretch
+            target_num_cols = len(new_headers) if is_header_only else (1 + len(footer_headers) + len(mapping_headers))
+            
+            # Helper to convert col number to Excel-style Letter (e.g., 28 -> AB)
+            col_letter = ""
+            temp = target_num_cols
+            while temp > 0:
+                temp, remainder = divmod(temp - 1, 26)
+                col_letter = chr(65 + remainder) + col_letter
 
-        # for cell in header_cells:
-        #     # Color the row from Column A to the end of the header columns
-        #     header_range = f"A{cell.row}:{col_letter}{cell.row}"
-            
-        #     worksheet.format(header_range, {
-        #         "backgroundColor": {
-        #             "red": 0.27, 
-        #             "green": 0.74, 
-        #             "blue": 0.78
-        #         }, # #46bdc6
-        #         "textFormat": {
-        #             "foregroundColor": {"red": 0.0, "green": 0.0, "blue": 0.0}, 
-        #             "bold": True
-        #         },
-        #         "horizontalAlignment": "CENTER"
-        #     })
-            
+            for cell in header_cells:
+                header_range = f"A{cell.row}:{col_letter}{cell.row}"
+                
+                worksheet.format(header_range, {
+                    "backgroundColor": {
+                        "red": 0.27, 
+                        "green": 0.74, 
+                        "blue": 0.78
+                    }, # #46bdc6
+                    "textFormat": {
+                        "foregroundColor": {"red": 0.0, "green": 0.0, "blue": 0.0}, 
+                        "bold": True
+                    },
+                    "horizontalAlignment": "CENTER"
+                })
+                
     except Exception as e:
         log(f"Error writing row to sheet: {e}")

@@ -20,6 +20,8 @@ from google.oauth2.service_account import Credentials
 from assets_scraper import run_assets_scraper
 from code_comparison import run_code_comparison
 from tracking_scraper import run_tracking_scraper
+from verify_cid_gam import run_verification
+
 
 
 def resource_path(relative_path):
@@ -133,6 +135,7 @@ class QATool(ttk.Frame):
             "all": "All",
             "capture_assets": "Capture Assets",
             "capture_tracking": "Capture Tracking",
+            "verify_cid_gam": "Verify CID & GAM",
             "code_comparison": "Code Comparison",
         }
 
@@ -211,6 +214,10 @@ class QATool(ttk.Frame):
                 self.log("Starting Tracking extraction...")
                 asyncio.run(run_tracking_scraper(cos_links, tracking_rows, tracking_header, self.log, spreadsheet))
                 self.log("Tracking extraction completed.")
+
+                self.log("Starting CID & GAM Verification...")
+                asyncio.run(run_verification(self.cos_links, tracking_rows_full, self.log, spreadsheet))
+                self.log("CID & GAM Verification completed.")
                 
                 self.log("\nStarting Code Comparison...")
                 asyncio.run(run_code_comparison(self.cos_links, tracking_rows_full, self.log, spreadsheet))
@@ -225,6 +232,11 @@ class QATool(ttk.Frame):
                 self.log("Starting Tracking extraction...")
                 asyncio.run(run_tracking_scraper(cos_links, tracking_rows, tracking_header, self.log, spreadsheet))
                 self.log("Tracking extraction completed.")
+            
+            elif mode == "verify_cid_gam":
+                self.log("Starting CID & GAM Verification...")
+                asyncio.run(run_verification(self.cos_links, tracking_rows_full, self.log, spreadsheet))
+                self.log("CID & GAM Verification completed.")
             
             elif mode == "code_comparison":
                 self.log("Starting Code Comparison...")

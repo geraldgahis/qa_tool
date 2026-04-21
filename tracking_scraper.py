@@ -57,8 +57,21 @@ def strip_tracking_urls(tracking_header, tracking_rows, log):
 
 async def run_tracking_scraper(cos_links, tracking_rows, tracking_header, log, spreadsheet):
 
+    # --- NEW: Handle Footer Detection to prevent mismatched lengths ---
+    data_rows = []
+    for row in tracking_rows:
+        # Skip the footer row if it exists
+        if any("setting" in str(cell).lower() for cell in row):
+            continue
+        # Skip completely empty rows
+        if not any(str(cell).strip() for cell in row):
+            continue
+        data_rows.append(row)
+
     worksheet = get_sheet(spreadsheet.id, "Extracted Data")
-    stripped_tracking_rows = strip_tracking_urls(tracking_header, tracking_rows, log)
+    
+    # Pass the filtered 'data_rows' instead of the raw 'tracking_rows'
+    stripped_tracking_rows = strip_tracking_urls(tracking_header, data_rows, log)
     
     final_rows = []
     header_list = [h.strip() for h in tracking_header]
@@ -72,8 +85,13 @@ async def run_tracking_scraper(cos_links, tracking_rows, tracking_header, log, s
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True, channel="msedge")
         
+        # Calculate the actual number of tasks based on the matched lists
+        total_tasks = min(len(cos_links), len(stripped_tracking_rows))
+        
         for idx, (cos_url, original_row) in enumerate(zip(cos_links, stripped_tracking_rows)):
-            log(f"[{idx + 1}/{len(tracking_rows)}] {original_row[0]}")
+            
+            # --- FIX: Update log to use the correct total ---
+            log(f"[{idx + 1}/{total_tasks}] {original_row[0]}")
             log(f"  → Opening {cos_url}")
 
             while len(original_row) < len(header_list):
