@@ -1,0 +1,19 @@
+# Exclude the entire node_modules folder
+node_modules/
+
+# Exclude the environment configuration (important for security!)
+.env
+
+# Exclude build/dist folders
+dist/
+build/
+Code Comparison Results/
+__pycache__/
+USER_SESSION
+venv/
+credentials.json
+
+
+# Exclude OS-specific files
+.DS_Store
+Thumbs.db
