@@ -273,7 +273,7 @@ def write_code_comparison_to_sheet(worksheet, headers, rows, comparison_storage,
 
         if is_header_only:
             rows_to_write.append([]) 
-            rows_to_write.append(["Creative Name, Actual Size, Lab Product, and SafeFrame Checking"])
+            rows_to_write.append(["Verify CID and GAM settings"])
             
             rows_to_write.append(new_headers)
             original_footer = comparison_storage.get("footer_row", [])
